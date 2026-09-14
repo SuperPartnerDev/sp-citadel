@@ -1,0 +1,22 @@
+# Pruebas del fork de Citadel en un Mac de GitHub Actions. Repo público: los
+# minutos son gratis.
+name: pruebas
+on:
+  push:
+  pull_request:
+concurrency:
+  group: pruebas-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  pruebas:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: .build
+          key: spm-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+      - run: swift --version
+      - run: swift build
+      - run: swift test
