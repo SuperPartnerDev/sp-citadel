@@ -433,3 +433,8 @@ extension ByteBuffer {
         return lengthLength + valueLength
     }
 }
+
+// montador: usado desde un `actor` en MontadorCore. Sus campos son `let`
+// (privateExponent, _publicKey); mismo criterio que SFTPFile en este
+// paquete. El compilador no puede verlo por los punteros BIGNUM.
+extension Insecure.RSA.PrivateKey: @unchecked Sendable {}

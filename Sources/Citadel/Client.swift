@@ -370,3 +370,8 @@ public final class SSHClient {
         try await self.session.channel.close()
     }
 }
+
+// montador: usado desde un `actor` en MontadorCore. Su estado muta solo en
+// `session.channel.eventLoop` (NIO ya lo serializa); el compilador no puede
+// verlo, de ahí `@unchecked`.
+extension SSHClient: @unchecked Sendable {}
