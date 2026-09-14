@@ -190,7 +190,10 @@ public final class SFTPClient: Sendable {
                 )
             )
         }
-        
+
+        // montador: el servidor queda con el handle abierto si no se cierra.
+        _ = try await sendRequest(.closeFile(.init(requestId: self.allocateRequestId(), handle: handle.handle)))
+
         return names
     }
 
@@ -255,6 +258,9 @@ public final class SFTPClient: Sendable {
                 )
             )
         }
+
+        // montador: cerrar el handle del directorio.
+        _ = try await sendRequest(.closeFile(.init(requestId: self.allocateRequestId(), handle: handle.handle)))
 
         return totalComponents
     }

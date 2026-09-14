@@ -3,7 +3,8 @@ import Logging
 
 /// A "handle" for accessing a file that has been successfully opened on an SFTP server. File handles support
 /// reading (if opened with read access) and writing/appending (if opened with write/append access).
-public final class SFTPFile {
+/// montador: sus métodos solo mandan peticiones por el SFTPClient, que es Sendable.
+public final class SFTPFile: @unchecked Sendable {
     /// A typealias to clarify when a buffer is being used as a file handle.
     ///
     /// This should probably be a `struct` wrapping a buffer for stronger type safety.
