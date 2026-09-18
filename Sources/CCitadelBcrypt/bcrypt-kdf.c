@@ -41,6 +41,11 @@
  * wise caller could do; we just do it for you.
  */
 
+/* bcrypt.h define BCRYPT_WORDS 6 (las palabras del hash de contrasena de bcrypt); el
+ * derivador de claves de OpenSSH usa 8. Los dos valores son correctos en su sitio; el
+ * #undef lo deja explicito y quita el aviso de macro redefinido (SuperPartner, 17 sep 2026). */
+#undef BCRYPT_WORDS
+#undef BCRYPT_HASHSIZE
 #define BCRYPT_WORDS 8
 #define BCRYPT_HASHSIZE (BCRYPT_WORDS * 4)
 

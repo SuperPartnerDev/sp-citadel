@@ -1,4 +1,4 @@
-// swift-tools-version:5.9
+// swift-tools-version:6.0
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -35,7 +35,16 @@ let package = Package(
                 .product(name: "_CryptoExtras", package: "swift-crypto"),
                 .product(name: "BigInt", package: "BigInt"),
                 .product(name: "Logging", package: "swift-log"),
-            ]
+            ],
+            // Citadel es codigo de terceros (fork de orlandos-nl/Citadel) escrito para Swift 5:
+            // compilado en modo Swift 6 suelta unos noventa avisos de concurrencia estricta que
+            // no son de SP Mount y que tapan los nuestros. Se compila en modo Swift 5, que es el
+            // que la libreria declara soportar; SPMountCore sigue en Swift 6 (SuperPartner, 17 sep 2026).
+            // Modo Swift 5 (la libreria esta escrita para el) y sin avisos: Xcode impone la
+            // version de Swift del proyecto a los paquetes, asi que el modo por si solo no
+            // bastaba y seguian saliendo mas de cien avisos de concurrencia de codigo que no
+            // es nuestro. Es un fork local por ruta, asi que unsafeFlags esta permitido.
+            swiftSettings: [.swiftLanguageMode(.v5), .unsafeFlags(["-suppress-warnings"])]
         ),
         .testTarget(
             name: "CitadelTests",
