@@ -423,7 +423,14 @@ struct SFTPMessageParser: ByteToMessageDecoder {
                     targetPath: targetPath
                 )
             )
-        case .extended, .extendedReply:
+        case .extended:
+            guard let requestId = payload.readInteger(as: UInt32.self),
+                  let name = payload.readSSHString(),
+                  let data = payload.readSlice(length: payload.readableBytes) else {
+                throw SFTPError.invalidPayload(type: type)
+            }
+            message = .extended(.init(requestId: requestId, name: name, data: data))
+        case .extendedReply:
             throw SFTPError.invalidPayload(type: type)
         }
         

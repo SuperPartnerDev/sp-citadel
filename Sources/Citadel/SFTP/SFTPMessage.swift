@@ -22,6 +22,7 @@ public struct SFTPFileListing: Sendable {
 }
 
 enum SFTPRequest: CustomDebugStringConvertible, Sendable {
+    case extended(SFTPMessage.Extended)
     case openFile(SFTPMessage.OpenFile)
     case closeFile(SFTPMessage.CloseFile)
     case read(SFTPMessage.ReadFile)
@@ -41,6 +42,7 @@ enum SFTPRequest: CustomDebugStringConvertible, Sendable {
     var requestId: UInt32 {
         get {
             switch self {
+            case .extended(let message): return message.requestId
             case .openFile(let message):
                 return message.requestId
             case .opendir(let message):
@@ -77,6 +79,7 @@ enum SFTPRequest: CustomDebugStringConvertible, Sendable {
     
     func makeMessage() -> SFTPMessage {
         switch self {
+        case .extended(let message): return .extended(message)
         case .openFile(let message):
             return .openFile(message)
         case .opendir(let message):
@@ -112,6 +115,7 @@ enum SFTPRequest: CustomDebugStringConvertible, Sendable {
     
     var debugDescription: String {
         switch self {
+        case .extended(let message): return message.debugDescription
         case .openFile(let message): return message.debugDescription
         case .closeFile(let message): return message.debugDescription
         case .read(let message): return message.debugDescription
@@ -187,6 +191,7 @@ enum SFTPResponse: Sendable {
     
     init?(message: SFTPMessage) {
         switch message {
+        case .extended: return nil
         case .handle(let message):
             self = .handle(message)
         case .status(let message):
@@ -232,6 +237,15 @@ extension SFTPMessageContent {
 }
 
 public enum SFTPMessage: Sendable {
+    public struct Extended: SFTPMessageContent, Sendable {
+        public static let id = SFTPMessageType.extended
+        public let requestId: UInt32
+        public let name: String
+        public var data: ByteBuffer
+        public var debugDescription: String { "{\(requestId)}(\(name))" }
+        fileprivate var debugVariantWithoutLargeData: Self { self }
+    }
+
     public struct Initialize: SFTPMessageContent, Sendable {
         public static let id = SFTPMessageType.initialize
         
@@ -520,6 +534,7 @@ public enum SFTPMessage: Sendable {
     ///
     /// Starts SFTP session and indicates client version.
     /// Response is `version`.
+    case extended(Extended)
     case initialize(Initialize)
     
     /// Server.
@@ -587,6 +602,7 @@ public enum SFTPMessage: Sendable {
     public var messageType: SFTPMessageType {
         switch self {
         case
+                .extended(let message as SFTPMessageContent),
                 .initialize(let message as SFTPMessageContent),
                 .version(let message as SFTPMessageContent),
                 .openFile(let message as SFTPMessageContent),
@@ -619,6 +635,7 @@ public enum SFTPMessage: Sendable {
     public var debugDescription: String {
         switch self {
         case
+                .extended(let message as SFTPMessageContent),
                 .initialize(let message as SFTPMessageContent),
                 .version(let message as SFTPMessageContent),
                 .openFile(let message as SFTPMessageContent),
@@ -650,6 +667,7 @@ public enum SFTPMessage: Sendable {
     
     private var debugVariantWithoutLargeData: SFTPMessage {
         switch self {
+        case .extended(let message): return Self.extended(message.debugVariantWithoutLargeData)
         case .initialize(let message): return Self.initialize(message.debugVariantWithoutLargeData)
         case .version(let message): return Self.version(message.debugVariantWithoutLargeData)
         case .openFile(let message): return Self.openFile(message.debugVariantWithoutLargeData)

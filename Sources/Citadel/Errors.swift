@@ -15,6 +15,7 @@ public enum SSHExecError: Error {
 }
 
 public enum SFTPError: Error {
+    case atomicRenameUnsupported
     case unknownMessage
     case invalidPayload(type: SFTPMessageType)
     case invalidResponse

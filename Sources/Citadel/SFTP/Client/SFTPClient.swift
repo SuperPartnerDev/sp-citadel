@@ -497,6 +497,20 @@ public final class SFTPClient: Sendable {
         self.logger.debug("SFTP renamed file at \(oldPath) to \(newPath)")
     }
 
+    /// POSIX replacement, only when the server advertised version 1.
+    /// No remove-then-rename fallback: that could lose the previous file.
+    public func renameAtomically(at oldPath: String, to newPath: String) async throws {
+        let version = try await responses.sftpVersion.futureResult.get()
+        guard version.extensionData.contains(where: {
+            $0.0 == "posix-rename@openssh.com" && $0.1 == "1"
+        }) else { throw SFTPError.atomicRenameUnsupported }
+        var data = ByteBufferAllocator().buffer(capacity: 256)
+        data.writeSSHString(oldPath)
+        data.writeSSHString(newPath)
+        _ = try await sendRequest(.extended(.init(
+            requestId: allocateRequestId(), name: "posix-rename@openssh.com", data: data)))
+    }
+
     /// Get the canonical absolute path.
     ///
     /// - Parameter path: Path to resolve
