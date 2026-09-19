@@ -497,6 +497,13 @@ public final class SFTPClient: Sendable {
         self.logger.debug("SFTP renamed file at \(oldPath) to \(newPath)")
     }
 
+
+    /// Only use an extension after the server advertised the requested version.
+    public func supportsExtension(_ name: String, version requested: String = "1") async throws -> Bool {
+        let version = try await responses.sftpVersion.futureResult.get()
+        return version.extensionData.contains { $0.0 == name && $0.1 == requested }
+    }
+
     /// POSIX replacement, only when the server advertised version 1.
     /// No remove-then-rename fallback: that could lose the previous file.
     public func renameAtomically(at oldPath: String, to newPath: String) async throws {

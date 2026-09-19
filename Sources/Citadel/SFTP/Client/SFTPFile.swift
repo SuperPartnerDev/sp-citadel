@@ -251,6 +251,42 @@ public final class SFTPFile: @unchecked Sendable {
         self.logger.debug("SFTP finished writing \(data.readerIndex) bytes @ \(offset) to file \(self.handle.sftpHandleDebugDescription)")
     }
 
+
+    /// Flush when supported. Absence is different from an advertised fsync failing.
+    @discardableResult
+    public func synchronizeIfSupported() async throws -> Bool {
+        guard isActive else { throw SFTPError.fileHandleInvalid }
+        guard try await client.supportsExtension("fsync@openssh.com") else { return false }
+        var data = ByteBufferAllocator().buffer(capacity: handle.readableBytes + 4)
+        data.writeSSHString(handle.readableBytesView)
+        guard case .status(let status) = try await client.sendRequest(.extended(.init(
+            requestId: client.allocateRequestId(), name: "fsync@openssh.com", data: data
+        ))) else { throw SFTPError.invalidResponse }
+        guard status.errorCode == .ok else { throw SFTPError.errorStatus(status) }
+        return true
+    }
+
+    /// Copies between existing handles without replacing either file.
+    /// Returns false only if copy-data was not advertised; request failures propagate.
+    public func copyBytes(to destination: SFTPFile, from offset: UInt64, length: UInt64) async throws -> Bool {
+        guard isActive, destination.isActive, client === destination.client else {
+            throw SFTPError.fileHandleInvalid
+        }
+        guard length > 0 else { return true } // copy-data length zero means "until EOF".
+        guard try await client.supportsExtension("copy-data") else { return false }
+        var data = ByteBufferAllocator().buffer(capacity: 128)
+        data.writeSSHString(handle.readableBytesView)
+        data.writeInteger(offset)
+        data.writeInteger(length)
+        data.writeSSHString(destination.handle.readableBytesView)
+        data.writeInteger(offset)
+        guard case .status(let status) = try await client.sendRequest(.extended(.init(
+            requestId: client.allocateRequestId(), name: "copy-data", data: data
+        ))) else { throw SFTPError.invalidResponse }
+        guard status.errorCode == .ok else { throw SFTPError.errorStatus(status) }
+        return true
+    }
+
     /// Close the file handle.
     ///
     /// - Throws: SFTPError if close fails
