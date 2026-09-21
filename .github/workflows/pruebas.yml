@@ -1,9 +1,10 @@
 # Pruebas del fork de Citadel en un Mac de GitHub Actions. Repo público: los
 # minutos son gratis.
 name: pruebas
+# Solo a mano (operador, 21 sep 2026): con la Mac disponible no se compila en GitHub;
+# se lanza con `gh workflow run pruebas.yml -R SuperPartnerDev/sp-citadel` cuando no está.
 on:
-  push:
-  pull_request:
+  workflow_dispatch:
 concurrency:
   group: pruebas-${{ github.ref }}
   cancel-in-progress: true
