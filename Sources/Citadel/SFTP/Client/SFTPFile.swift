@@ -180,8 +180,13 @@ public final class SFTPFile: @unchecked Sendable {
                         length: UInt32(consumed)
                     )
                     
-                    readableBytes -= UInt64(data.readableBytes)
+                    // El servidor puede mandar más de lo que dijo, o nada: restar a ciegas
+                    // pasaba por debajo de cero y detenía el proceso, y un lote vacío dejaba
+                    // el bucle dando vueltas (F4, revisión de seguridad del 22 sep 2026).
+                    let recibidos = UInt64(data.readableBytes)
                     buffer.writeBuffer(&data)
+                    if recibidos == 0 { break }
+                    readableBytes -= Swift.min(readableBytes, recibidos)
                 }
             } else {
                 while var data = try await self.read(

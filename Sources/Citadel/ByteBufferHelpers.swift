@@ -119,10 +119,14 @@ extension ByteBuffer {
     }
     
     mutating func writeSSHString(_ string: String) {
-        let oldWriterIndex = writerIndex
-        moveWriterIndex(forwardBy: 4)
+        // Se reserva el sitio antes de mover el índice: `moveWriterIndex(forwardBy: 4)` sobre
+        // un buffer sin cuatro bytes libres detiene el proceso, y el largo lo decide un
+        // nombre de archivo o una ruta de rename, o sea el otro extremo (F1, revisión de
+        // seguridad del 22 sep 2026).
+        let bytes = string.utf8.count
+        reserveCapacity(minimumWritableBytes: 4 + bytes)
+        writeInteger(UInt32(bytes))
         writeString(string)
-        setInteger(UInt32(writerIndex - oldWriterIndex - 4), at: oldWriterIndex)
     }
     
     mutating func readSSHString() -> String? {

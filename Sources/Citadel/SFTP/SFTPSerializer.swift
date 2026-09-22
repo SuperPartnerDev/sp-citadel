@@ -64,6 +64,10 @@ final class SFTPMessageSerializer: MessageToByteEncoder {
             out.writeInteger(SFTPMessage.RmDir.id.rawValue)
             out.writeInteger(rmdir.requestId)
             out.writeSSHString(rmdir.filePath)
+        case .lstat(let stat):
+            out.writeInteger(SFTPMessage.LStat.id.rawValue)
+            out.writeInteger(stat.requestId)
+            out.writeSSHString(stat.path)
         case .stat(let stat):
             out.writeInteger(SFTPMessage.Stat.id.rawValue)
             out.writeInteger(stat.requestId)

@@ -278,6 +278,28 @@ public final class SFTPClient: Sendable {
     /// print("Permissions:", attrs.permissions)
     /// print("Modified:", attrs.modificationTime)
     /// ```
+    /// Como `getAttributes`, pero sin seguir el enlace simbólico: devuelve los atributos del
+    /// enlace mismo. Lo usa quien necesita saber que una entrada ES un enlace antes de
+    /// escribir o borrar a través de ella (SP Mount, 22 sep 2026).
+    public func getLinkAttributes(
+        at filePath: String
+    ) async throws -> SFTPFileAttributes {
+        self.logger.info("SFTP requesting link attributes at '\(filePath)'")
+
+        let response = try await sendRequest(.lstat(.init(
+            requestId: allocateRequestId(),
+            path: filePath
+        )))
+
+        guard case .attributes(let attributes) = response else {
+            self.logger.warning("SFTP server returned bad response to lstat request, this is a protocol error")
+            throw SFTPError.invalidResponse
+        }
+
+        self.logger.debug("SFTP got link attributes at '\(filePath)'")
+        return attributes.attributes
+    }
+
     public func getAttributes(
         at filePath: String
     ) async throws -> SFTPFileAttributes {

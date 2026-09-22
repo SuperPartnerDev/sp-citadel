@@ -29,6 +29,9 @@ enum SFTPRequest: CustomDebugStringConvertible, Sendable {
     case write(SFTPMessage.WriteFile)
     case mkdir(SFTPMessage.MkDir)
     case stat(SFTPMessage.Stat)
+    /// LSTAT: como STAT pero sin seguir el enlace simbólico (SP Mount lo necesita para no
+    /// borrar ni escribir del otro lado de un enlace, 22 sep 2026).
+    case lstat(SFTPMessage.LStat)
     case fstat(SFTPMessage.FileStat)
     case readdir(SFTPMessage.ReadDir)
     case opendir(SFTPMessage.OpenDir)
@@ -55,6 +58,7 @@ enum SFTPRequest: CustomDebugStringConvertible, Sendable {
                 return message.requestId
             case .mkdir(let message):
                 return message.requestId
+            case .lstat(let message): return message.requestId
             case .stat(let message):
                 return message.requestId
             case .fstat(let message):
@@ -92,6 +96,8 @@ enum SFTPRequest: CustomDebugStringConvertible, Sendable {
             return .write(message)
         case .mkdir(let message):
             return .mkdir(message)
+        case .lstat(let message):
+            return .lstat(message)
         case .stat(let message):
             return .stat(message)
         case .fstat(let message):
@@ -121,6 +127,7 @@ enum SFTPRequest: CustomDebugStringConvertible, Sendable {
         case .read(let message): return message.debugDescription
         case .write(let message): return message.debugDescription
         case .mkdir(let message): return message.debugDescription
+        case .lstat(let message): return message.debugDescription
         case .stat(let message): return message.debugDescription
         case .fstat(let message): return message.debugDescription
         case .readdir(let message): return message.debugDescription
@@ -678,6 +685,7 @@ public enum SFTPMessage: Sendable {
         case .status(let message): return Self.status(message.debugVariantWithoutLargeData)
         case .data(let message): return Self.data(message.debugVariantWithoutLargeData)
         case .mkdir(let message): return Self.mkdir(message.debugVariantWithoutLargeData)
+        case .lstat(let message): return Self.lstat(message.debugVariantWithoutLargeData)
         case .stat(let message): return Self.stat(message.debugVariantWithoutLargeData)
         case .fstat(let message): return Self.fstat(message.debugVariantWithoutLargeData)
         case .lstat(let message): return Self.lstat(message.debugVariantWithoutLargeData)
