@@ -1,4 +1,5 @@
 {
+  "originHash" : "6e91644d5bf5170fa743c49649b39b540151e1abcb6b60dbb02d2286795267ec",
   "pins" : [
     {
       "identity" : "bigint",
@@ -7,15 +8,6 @@
       "state" : {
         "revision" : "0ed110f7555c34ff468e72e1686e59721f2b0da6",
         "version" : "5.3.0"
-      }
-    },
-    {
-      "identity" : "colorizeswift",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/mtynior/ColorizeSwift.git",
-      "state" : {
-        "revision" : "2a354639173d021f4648cf1912b2b00a3a7cd83c",
-        "version" : "1.6.0"
       }
     },
     {
@@ -75,10 +67,10 @@
     {
       "identity" : "swift-nio-ssh",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/Wellz26/swift-nio-ssh.git",
+      "location" : "https://github.com/SuperPartnerDev/swift-nio-ssh.git",
       "state" : {
-        "revision" : "b93961a2988607a756cbc21a811f406f27aa9ab6",
-        "version" : "0.3.4"
+        "revision" : "a1b5db6f10a5e93d35f859f951faf87a624411fe",
+        "version" : "0.3.7-sp.1"
       }
     },
     {
@@ -91,5 +83,5 @@
       }
     }
   ],
-  "version" : 2
+  "version" : 3
 }

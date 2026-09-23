@@ -17,13 +17,12 @@ let package = Package(
     ],
     dependencies: [
         // .package(path: "/Users/joannisorlandos/git/joannis/swift-nio-ssh"),
-        // Fijada en una versión exacta, no en un rango (revisión de seguridad del 22 sep
-        // 2026, F2/F6): este no es el swift-nio-ssh de Apple sino el fork de un tercero, y
-        // con "0.3.4" ..< "0.4.0" una 0.3.8 publicada allí entraba sola en la próxima
-        // resolución, sin que nadie leyera el cambio. Qué hacer a futuro con esta
-        // dependencia (migrar al de Apple, que va por la 0.13, o hacer un fork propio) es
-        // una decisión abierta: apple-dev/REVISION-SEGURIDAD.md.
-        .package(url: "https://github.com/Wellz26/swift-nio-ssh.git", exact: "0.3.7"),
+        // Fork propio de la capa SSH (decisión del operador, 22 sep 2026,
+        // apple-dev/ENCARGO-FORK-SSH.md): nace del d88989f (0.3.7) de Wellz26/swift-nio-ssh
+        // con el arreglo de Apple para CVE-2026-43798 encima. Fijado por versión exacta:
+        // nadie fuera de SuperPartner publica una versión de esta capa, y una versión nueva
+        // entra solo cuando alguien cambia este número a propósito.
+        .package(url: "https://github.com/SuperPartnerDev/swift-nio-ssh.git", exact: "0.3.7-sp.1"),
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.81.0"),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
         .package(url: "https://github.com/attaswift/BigInt.git", from: "5.2.0"),
