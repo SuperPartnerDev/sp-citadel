@@ -95,7 +95,8 @@ enum SFTPServerSubsystem {
         logger: Logger,
         username: String?
     ) -> EventLoopFuture<Void> {
-        let deserializeHandler = ByteToMessageHandler(SFTPMessageParser())
+        // Con tope de búfer: NIO corta la conexión si el peer acumula más de una trama máxima (F18).
+        let deserializeHandler = ByteToMessageHandler(SFTPMessageParser(), maximumBufferSize: Int(SFTPMessageParser.maximumMessageLength) + 4)
         let serializeHandler = MessageToByteHandler(SFTPMessageSerializer())
         let sftpInboundHandler = SFTPServerInboundHandler(
             logger: logger,

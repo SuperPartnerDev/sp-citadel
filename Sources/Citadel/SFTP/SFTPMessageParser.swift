@@ -2,12 +2,25 @@ import NIO
 
 struct SFTPMessageParser: ByteToMessageDecoder {
     typealias InboundOut = SFTPMessage
-    
+
+    /// Tope del campo de longitud de una trama SFTP (tipo más carga), el mismo que aplica el
+    /// cliente de OpenSSH (SFTP_MAX_MSG_LENGTH). Sin él, un peer hostil que anuncie 0 o 4 GiB
+    /// hacía que este lado acumulara memoria sin fin hasta morir (F18 de la revisión de
+    /// seguridad del 22 sep 2026). SP Mount pide lecturas de 128 KiB, y ningún servidor que
+    /// funcione con el cliente de OpenSSH manda tramas mayores que esto.
+    static let maximumMessageLength: UInt32 = 256 * 1024
+
     mutating func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         let oldReaderIndex = buffer.readerIndex
-        
+
+        guard let length = buffer.readInteger(as: UInt32.self) else {
+            return .needMoreData
+        }
+        guard length >= 1, length <= Self.maximumMessageLength else {
+            throw SFTPError.invalidMessageLength(length)
+        }
+
         guard
-            let length = buffer.readInteger(as: UInt32.self),
             let typeByte = buffer.readInteger(as: UInt8.self),
             var payload = buffer.readSlice(length: Int(length) - 1) // 1 for the already parsed type
         else {

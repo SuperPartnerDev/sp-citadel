@@ -25,6 +25,8 @@ public enum SFTPError: Error {
     case fileHandleInvalid
     case errorStatus(SFTPMessage.Status)
     case unsupportedVersion(SFTPProtocolVersion)
+    /// La longitud de trama que anunció el peer es 0 o supera `SFTPMessageParser.maximumMessageLength`.
+    case invalidMessageLength(UInt32)
 }
 
 public enum CitadelError: Error {
