@@ -505,7 +505,9 @@ extension OpenSSH.KDF {
             guard
                 let salt = options.readSSHBuffer(),
                 let rounds: UInt32 = options.readInteger(),
-                rounds < 32
+                // OpenSSH no pone tope; 1Password exporta con 32 (SP Mount, 7 nov 2026). El tope solo evita
+                // que una llave con millones de rondas deje el descifrado colgado.
+                rounds <= 1000
             else {
                 throw InvalidOpenSSHKey.invalidOrUnsupportedBCryptConfig
             }
