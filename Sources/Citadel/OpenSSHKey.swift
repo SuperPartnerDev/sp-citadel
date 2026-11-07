@@ -192,6 +192,10 @@ enum OpenSSH {
         case none
         case aes128ctr = "aes128-ctr"
         case aes256ctr = "aes256-ctr"
+        // Cifrados autenticados con que OpenSSH (ssh-keygen -Z) y otras herramientas también guardan
+        // llaves privadas: la etiqueta de 16 bytes va después de la cadena cifrada (sshkey.c, PROTOCOL.key).
+        case aes256gcm = "aes256-gcm@openssh.com"
+        case chacha20poly1305 = "chacha20-poly1305@openssh.com"
         
         var keyLength: Int {
             switch self {
@@ -199,25 +203,39 @@ enum OpenSSH {
                 return 0
             case .aes128ctr:
                 return 16
-            case .aes256ctr:
+            case .aes256ctr, .aes256gcm:
                 return 32
+            case .chacha20poly1305:
+                return 64
             }
         }
         
         var ivLength: Int {
             switch self {
-            case .none:
+            case .none, .chacha20poly1305:
                 return 0
             case .aes128ctr, .aes256ctr:
                 return 16
+            case .aes256gcm:
+                return 12
             }
         }
         
         var blockSize: Int {
             switch self {
-            case .none:
+            case .none, .chacha20poly1305:
                 return 8
-            case .aes128ctr, .aes256ctr:
+            case .aes128ctr, .aes256ctr, .aes256gcm:
+                return 16
+            }
+        }
+        
+        /// Bytes de la etiqueta de autenticación que siguen a la llave privada cifrada.
+        var authLength: Int {
+            switch self {
+            case .none, .aes128ctr, .aes256ctr:
+                return 0
+            case .aes256gcm, .chacha20poly1305:
                 return 16
             }
         }
@@ -225,7 +243,8 @@ enum OpenSSH {
         func decryptBuffer(
             _ buffer: inout ByteBuffer,
             key: [UInt8],
-            iv: [UInt8]
+            iv: [UInt8],
+            tag: [UInt8]
         ) throws {
             switch self {
             case .none:
@@ -234,7 +253,45 @@ enum OpenSSH {
                 try buffer.decryptAES(cipher: CCryptoBoringSSL_EVP_aes_128_ctr(), key: key, iv: iv)
             case .aes256ctr:
                 try buffer.decryptAES(cipher: CCryptoBoringSSL_EVP_aes_256_ctr(), key: key, iv: iv)
+            case .aes256gcm:
+                // Sin datos adicionales: OpenSSH cifra la llave con aadlen 0.
+                guard buffer.readableBytes % 16 == 0 else { throw InvalidOpenSSHKey.invalidPadding }
+                let cifrado = buffer.readBytes(length: buffer.readableBytes)!
+                let caja = try AES.GCM.SealedBox(nonce: AES.GCM.Nonce(data: iv), ciphertext: cifrado, tag: tag)
+                guard let claro = try? AES.GCM.open(caja, using: SymmetricKey(data: key)) else {
+                    throw KeyError.cryptoError
+                }
+                buffer = ByteBuffer(bytes: claro)
+            case .chacha20poly1305:
+                buffer = ByteBuffer(bytes: try Self.abrirChaChaPoly(buffer.readBytes(length: buffer.readableBytes)!, key: key, tag: tag))
             }
+        }
+        
+        /// chacha20-poly1305@openssh.com (PROTOCOL.chacha20poly1305) con número de secuencia 0 y sin
+        /// cabecera, como cifra OpenSSH una llave privada: la clave principal son los primeros 32 bytes; el
+        /// bloque 0 de ChaCha20 da la clave de Poly1305 y el texto se descifra desde el bloque 1. Con nonce
+        /// de 64 bits en cero, ChaCha20 original y el de nonce de 96 bits de BoringSSL dan el mismo flujo.
+        private static func abrirChaChaPoly(_ cifrado: [UInt8], key: [UInt8], tag: [UInt8]) throws -> [UInt8] {
+            guard key.count == 64, tag.count == 16, cifrado.count % 8 == 0 else { throw KeyError.cryptoError }
+            let principal = Array(key[0..<32])
+            let nonce = [UInt8](repeating: 0, count: 12)
+            var clavePoly = [UInt8](repeating: 0, count: 32)
+            let ceros = [UInt8](repeating: 0, count: 32)
+            CCryptoBoringSSL_CRYPTO_chacha_20(&clavePoly, ceros, 32, principal, nonce, 0)
+            var calculada = [UInt8](repeating: 0, count: 16)
+            // poly1305_state es un arreglo C de 512 bytes; BoringSSL lo alinea por dentro.
+            var estado = [UInt8](repeating: 0, count: MemoryLayout<poly1305_state>.size)
+            estado.withUnsafeMutableBytes { bytes in
+                let puntero = bytes.baseAddress!.assumingMemoryBound(to: poly1305_state.self)
+                CCryptoBoringSSL_CRYPTO_poly1305_init(puntero, clavePoly)
+                CCryptoBoringSSL_CRYPTO_poly1305_update(puntero, cifrado, cifrado.count)
+                CCryptoBoringSSL_CRYPTO_poly1305_finish(puntero, &calculada)
+            }
+            // Comparación en tiempo constante, como OpenSSH (timingsafe_bcmp).
+            guard CCryptoBoringSSL_CRYPTO_memcmp(calculada, tag, 16) == 0 else { throw KeyError.cryptoError }
+            var claro = [UInt8](repeating: 0, count: cifrado.count)
+            CCryptoBoringSSL_CRYPTO_chacha_20(&claro, cifrado, cifrado.count, principal, nonce, 1)
+            return claro
         }
     }
     
@@ -359,11 +416,16 @@ extension OpenSSH.PrivateKey {
             throw InvalidOpenSSHKey.missingPrivateKeyBuffer
         }
         
+        // Los cifrados autenticados dejan su etiqueta justo después de la llave privada cifrada.
+        guard let tag = buffer.readBytes(length: cipher.authLength) else {
+            throw InvalidOpenSSHKey.missingPrivateKeyBuffer
+        }
+        
         try kdf.withKeyAndIV(
             cipher: cipher,
             basedOnDecryptionKey: decryptionKey
         ) { key, iv -> Void in
-            try cipher.decryptBuffer(&privateKeyBuffer, key: key, iv: iv)
+            try cipher.decryptBuffer(&privateKeyBuffer, key: key, iv: iv, tag: tag)
         }
         
         guard
