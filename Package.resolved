@@ -69,8 +69,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/SuperPartnerDev/swift-nio-ssh.git",
       "state" : {
-        "revision" : "d2bb3b60b195c9061410fff5caffcd0c5f05e862",
-        "version" : "0.3.7-sp.4"
+        "revision" : "1d6d8efb65931129eb63bbb1aeb16c3359371a81",
+        "version" : "0.3.7-sp.5"
       }
     },
     {
