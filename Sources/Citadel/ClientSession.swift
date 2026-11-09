@@ -90,6 +90,12 @@ final class ClientHandshakeHandler: ChannelInboundHandler, Sendable {
 
     func errorCaught(context: ChannelHandlerContext, error: any Error) {
         self.promise.fail(error)
+        // Un error de la conexión SSH (un paquete que el parser rechaza, una violación de protocolo)
+        // deja la conexión inservible. Sin cerrarla, nadie avisaba a los canales hijos y una petición
+        // SFTP pendiente esperaba para siempre (visto en SP Mount el 9 nov 2026: una descarga trabada
+        // más de 25 minutos). Al cerrar, NIOSSH cierra los canales y SFTPClient falla lo pendiente.
+        self.logger.error("Error en la conexión SSH, se cierra: \(error)")
+        context.close(promise: nil)
     }
     
     deinit {
